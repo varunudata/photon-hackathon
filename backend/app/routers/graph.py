@@ -63,3 +63,20 @@ async def get_subgraph(
         "nodes": nodes_with_community,
         "edges": raw["edges"],
     }
+
+
+@router.get("/{repo_id}/impact/{node_id:path}")
+async def get_impact(
+    repo_id: str,
+    node_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Return impact analysis for a module node."""
+    repo = await session.get(Repo, repo_id)
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repo not found")
+
+    client = Neo4jClient()
+    result = await client.analyze_impact(node_id, repo_id)
+    await client.close()
+    return result

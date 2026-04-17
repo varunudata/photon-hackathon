@@ -81,6 +81,29 @@ export interface GraphData {
   edges: GraphEdge[];
 }
 
+export interface ImpactNode {
+  id: string;
+  path: string;
+  depth?: number;
+}
+
+export interface ImpactAnalysis {
+  node_id: string;
+  impact_score: number;
+  risk_level: "LOW" | "MEDIUM" | "HIGH";
+  risk_emoji: string;
+  metrics: {
+    affected_count: number;
+    upstream_count: number;
+    max_depth: number;
+    fan_out: number;
+    fan_in: number;
+  };
+  affected_nodes: ImpactNode[];
+  upstream_nodes: ImpactNode[];
+  explanation: string;
+}
+
 export interface CitedChunk {
   id?: string;
   path?: string;
@@ -186,6 +209,14 @@ export const api = {
         { headers: headers() },
       );
       return handleResponse<GraphData>(res);
+    },
+
+    async getImpact(repoId: string, nodeId: string): Promise<ImpactAnalysis> {
+      const res = await fetch(
+        `${BASE}/api/graph/${repoId}/impact/${encodeURIComponent(nodeId)}`,
+        { headers: headers() },
+      );
+      return handleResponse<ImpactAnalysis>(res);
     },
   },
 

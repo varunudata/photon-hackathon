@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional
+from collections import deque
 
 from neo4j import AsyncGraphDatabase, AsyncDriver
 
@@ -196,3 +197,101 @@ class Neo4jClient:
                 fragment=fragment,
             )
             return [dict(r) for r in await result.data()]
+
+    async def analyze_impact(self, node_id: str, repo_id: str) -> dict:
+        """
+        Compute impact analysis for a module node:
+        - affected_nodes: all downstream nodes reachable via IMPORTS
+        - reverse_affected: all upstream nodes (who imports this)
+        - max_depth: longest downstream path
+        - fan_out: direct children
+        - fan_in: direct parents
+        Returns a dict with score, risk, metrics, affected_ids, explanation.
+        """
+        async with self._driver.session() as s:
+            # Downstream (forward) reachability — what this node affects
+            fwd = await s.run(
+                """
+                MATCH (src:Module {node_id: $node_id})
+                MATCH path = (src)-[:IMPORTS*1..]->(downstream:Module {repo_id: $repo_id})
+                RETURN DISTINCT downstream.node_id AS id,
+                       downstream.path AS path,
+                       length(path) AS depth
+                """,
+                node_id=node_id,
+                repo_id=repo_id,
+            )
+            fwd_rows = await fwd.data()
+
+            # Upstream (reverse) reachability — who depends on this node
+            rev = await s.run(
+                """
+                MATCH (src:Module {node_id: $node_id})
+                MATCH (upstream:Module {repo_id: $repo_id})-[:IMPORTS*1..]->(src)
+                RETURN DISTINCT upstream.node_id AS id, upstream.path AS path
+                """,
+                node_id=node_id,
+                repo_id=repo_id,
+            )
+            rev_rows = await rev.data()
+
+            # Direct fan-out (immediate children)
+            fanout_res = await s.run(
+                "MATCH (src:Module {node_id: $node_id})-[:IMPORTS]->(c) RETURN count(c) AS n",
+                node_id=node_id,
+            )
+            fanout_data = await fanout_res.data()
+            fan_out = fanout_data[0]["n"] if fanout_data else 0
+
+            # Direct fan-in (immediate parents)
+            fanin_res = await s.run(
+                "MATCH (p)-[:IMPORTS]->(src:Module {node_id: $node_id}) RETURN count(p) AS n",
+                node_id=node_id,
+            )
+            fanin_data = await fanin_res.data()
+            fan_in = fanin_data[0]["n"] if fanin_data else 0
+
+        affected_count = len(fwd_rows)
+        upstream_count = len(rev_rows)
+        max_depth = max((r["depth"] for r in fwd_rows), default=0)
+
+        # Normalize score against a practical max
+        raw = (affected_count * 2) + (max_depth * 5) + (fan_out * 3) + (fan_in * 4)
+        max_possible = 200  # practical ceiling for typical repos
+        impact_score = min(100, int((raw / max_possible) * 100)) if raw > 0 else 0
+
+        if impact_score < 30:
+            risk_level = "LOW"
+            risk_emoji = "🟢"
+        elif impact_score < 70:
+            risk_level = "MEDIUM"
+            risk_emoji = "🟡"
+        else:
+            risk_level = "HIGH"
+            risk_emoji = "🔴"
+
+        explanation = (
+            f"This module has {risk_level} impact. "
+            f"It directly or indirectly affects {affected_count} downstream module(s) "
+            f"with a maximum dependency depth of {max_depth}. "
+            f"{upstream_count} module(s) depend on it (fan-in: {fan_in} direct). "
+            f"Changing this file risks breaking {upstream_count} upstream dependent(s)."
+        )
+
+        return {
+            "node_id": node_id,
+            "impact_score": impact_score,
+            "risk_level": risk_level,
+            "risk_emoji": risk_emoji,
+            "metrics": {
+                "affected_count": affected_count,
+                "upstream_count": upstream_count,
+                "max_depth": max_depth,
+                "fan_out": fan_out,
+                "fan_in": fan_in,
+            },
+            "affected_nodes": [{"id": r["id"], "path": r["path"], "depth": r["depth"]} for r in fwd_rows],
+            "upstream_nodes": [{"id": r["id"], "path": r["path"]} for r in rev_rows],
+            "explanation": explanation,
+        }
+
