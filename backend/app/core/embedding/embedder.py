@@ -52,6 +52,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
         model=settings.gemini_embedding_model,
         content=texts,
         task_type="RETRIEVAL_DOCUMENT",
+        output_dimensionality=VECTOR_SIZE
     )
     return result["embedding"] if isinstance(result["embedding"][0], list) else [result["embedding"]]
 
@@ -98,6 +99,7 @@ async def vector_search(
         model=settings.gemini_embedding_model,
         content=question,
         task_type="RETRIEVAL_QUERY",
+        output_dimensionality=VECTOR_SIZE,
     )
     query_vec = vec_result["embedding"]
 

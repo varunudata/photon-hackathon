@@ -47,8 +47,8 @@ class Settings(BaseSettings):
 
     # Gemini
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    gemini_embedding_model: str = "models/text-embedding-004"
-    gemini_chat_model: str = "gemini-2.0-flash"
+    gemini_embedding_model: str = "models/gemini-embedding-001"
+    gemini_chat_model: str = "gemini-2.5-pro"
 
     # GitHub
     github_token: str = ""

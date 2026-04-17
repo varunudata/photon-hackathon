@@ -18,7 +18,7 @@ async def stream_answer(prompt: str, question: str) -> AsyncIterator[str]:
     model = genai.GenerativeModel(settings.gemini_chat_model)
 
     # Use streaming generation
-    response = model.generate_content(
+    response = await model.generate_content(
         prompt,
         generation_config=genai.types.GenerationConfig(
             temperature=0.2,
