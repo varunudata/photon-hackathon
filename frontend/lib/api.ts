@@ -82,12 +82,16 @@ export interface GraphData {
 }
 
 export interface CitedChunk {
-  id: string;
-  path: string;
+  id?: string;
+  path?: string;
+  file_path?: string;
   start_line: number;
   end_line: number;
-  score: number;
-  text: string;
+  score?: number;
+  text?: string;
+  symbol_name?: string;
+  language?: string;
+  chunk_id?: string;
 }
 
 export interface Pin {
@@ -111,7 +115,9 @@ export const api = {
     },
 
     async get(id: string): Promise<Repo> {
-      const res = await fetch(`${BASE}/api/repos/${id}`, { headers: headers() });
+      const res = await fetch(`${BASE}/api/repos/${id}`, {
+        headers: headers(),
+      });
       return handleResponse<Repo>(res);
     },
 
@@ -155,7 +161,9 @@ export const api = {
     },
 
     async listForRepo(repoId: string): Promise<Job[]> {
-      const res = await fetch(`${BASE}/api/jobs/repo/${repoId}`, { headers: headers() });
+      const res = await fetch(`${BASE}/api/jobs/repo/${repoId}`, {
+        headers: headers(),
+      });
       return handleResponse<Job[]>(res);
     },
 
@@ -175,14 +183,17 @@ export const api = {
     async getSubgraph(repoId: string, nodeId: string): Promise<GraphData> {
       const res = await fetch(
         `${BASE}/api/graph/${repoId}/subgraph/${encodeURIComponent(nodeId)}`,
-        { headers: headers() }
+        { headers: headers() },
       );
       return handleResponse<GraphData>(res);
     },
   },
 
   files: {
-    async get(repoId: string, filePath: string): Promise<{ content: string; language: string }> {
+    async get(
+      repoId: string,
+      filePath: string,
+    ): Promise<{ content: string; language: string }> {
       const encoded = encodeURIComponent(filePath);
       const res = await fetch(`${BASE}/api/files/${repoId}/${encoded}`, {
         headers: headers(),
@@ -224,7 +235,11 @@ export const api = {
 
   query: {
     /** Returns the raw fetch Response so callers can stream SSE. */
-    stream(payload: { repo_id: string; question: string; session_id?: string }): Promise<Response> {
+    stream(payload: {
+      repo_id: string;
+      question: string;
+      session_id?: string;
+    }): Promise<Response> {
       return fetch(`${BASE}/api/query`, {
         method: "POST",
         headers: headers(),

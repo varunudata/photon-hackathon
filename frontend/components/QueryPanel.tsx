@@ -27,7 +27,11 @@ const SUGGESTED_QUESTIONS = [
   "Which modules have the most dependencies?",
 ];
 
-export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPanelProps) {
+export default function QueryPanel({
+  repoId,
+  onCitationClick,
+  onPin,
+}: QueryPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -36,7 +40,10 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages]);
 
   const sendQuestion = useCallback(
@@ -55,7 +62,11 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
       try {
         const sessionId =
           messages.find((m) => m.sessionId)?.sessionId ?? undefined;
-        const res = await api.query.stream({ repo_id: repoId, question, session_id: sessionId });
+        const res = await api.query.stream({
+          repo_id: repoId,
+          question,
+          session_id: sessionId,
+        });
 
         for await (const event of readSSE(res)) {
           if (event.type === "meta") {
@@ -94,7 +105,7 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
         setStreaming(false);
       }
     },
-    [repoId, messages, streaming]
+    [repoId, messages, streaming],
   );
 
   async function handlePin(msg: Message) {
@@ -136,12 +147,24 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
       >
         {messages.length === 0 && (
           <div className="empty-state">
-            <Zap size={36} style={{ color: "var(--yasml-primary)", opacity: 0.6 }} />
+            <Zap
+              size={36}
+              style={{ color: "var(--yasml-primary)", opacity: 0.6 }}
+            />
             <h3>Ask anything about this codebase</h3>
             <p style={{ fontSize: "0.875rem", maxWidth: 360 }}>
-              YASML uses hybrid graph + semantic search to find relevant code and answer precisely.
+              YASML uses hybrid graph + semantic search to find relevant code
+              and answer precisely.
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", justifyContent: "center", marginTop: "0.5rem" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                justifyContent: "center",
+                marginTop: "0.5rem",
+              }}
+            >
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q}
@@ -192,25 +215,34 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
             )}
 
             <div className={`chat-bubble ${msg.role}`}>
-              {msg.text || (streaming && i === messages.length - 1 ? (
-                <span style={{ opacity: 0.6 }}>
-                  Thinking<span className="cursor-blink">▋</span>
-                </span>
-              ) : null)}
+              {msg.text ||
+                (streaming && i === messages.length - 1 ? (
+                  <span style={{ opacity: 0.6 }}>
+                    Thinking<span className="cursor-blink">▋</span>
+                  </span>
+                ) : null)}
             </div>
 
             {/* Citations */}
             {msg.chunks && msg.chunks.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "85%" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "4px",
+                  maxWidth: "85%",
+                }}
+              >
                 {msg.chunks.map((chunk, ci) => (
                   <button
                     key={ci}
                     className="citation"
                     onClick={() => onCitationClick?.(chunk)}
-                    title={`${chunk.path}:${chunk.start_line}-${chunk.end_line}`}
+                    title={`${chunk.path ?? chunk.file_path ?? ""}:${chunk.start_line}-${chunk.end_line}`}
                   >
                     <BookOpen size={11} />
-                    {chunk.path.split("/").pop()}:{chunk.start_line}
+                    {(chunk.path ?? chunk.file_path ?? "").split("/").pop()}:
+                    {chunk.start_line}
                   </button>
                 ))}
               </div>
@@ -234,8 +266,12 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
                   borderRadius: "var(--radius-sm)",
                   transition: "color 0.15s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--yasml-accent)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--yasml-accent)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--text-muted)")
+                }
               >
                 <Pin size={11} /> Pin to graph
               </button>
@@ -244,7 +280,13 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
         ))}
 
         {error && (
-          <div style={{ color: "var(--error)", fontSize: "0.8rem", padding: "0.5rem" }}>
+          <div
+            style={{
+              color: "var(--error)",
+              fontSize: "0.8rem",
+              padding: "0.5rem",
+            }}
+          >
             {error}
           </div>
         )}
@@ -283,7 +325,17 @@ export default function QueryPanel({ repoId, onCitationClick, onPin }: QueryPane
           style={{ flexShrink: 0, height: 42 }}
         >
           {streaming ? (
-            <span className="animate-spin" style={{ display: "inline-block", width: 15, height: 15, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%" }} />
+            <span
+              className="animate-spin"
+              style={{
+                display: "inline-block",
+                width: 15,
+                height: 15,
+                border: "2px solid rgba(255,255,255,0.3)",
+                borderTopColor: "#fff",
+                borderRadius: "50%",
+              }}
+            />
           ) : (
             <Send size={15} />
           )}

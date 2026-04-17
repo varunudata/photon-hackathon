@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -11,25 +12,34 @@ import ReactFlow, {
   type Edge,
   MarkerType,
   Panel,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import type { GraphData, GraphNode } from "@/lib/api";
 import { langColor } from "@/lib/utils";
 import React from "react";
 
 // ─── Cluster colour palette ───────────────────────────────────────────────────
 const COMMUNITY_COLORS = [
-  "#6366f1", "#22d3ee", "#10b981", "#f59e0b", "#ef4444",
-  "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16", "#f97316",
+  "#6366f1",
+  "#22d3ee",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
+  "#f97316",
 ];
 
 function communityColor(id: number): string {
   return COMMUNITY_COLORS[id % COMMUNITY_COLORS.length];
 }
 
-function buildReactFlowGraph(
-  data: GraphData
-): { nodes: Node[]; edges: Edge[] } {
+function buildReactFlowGraph(data: GraphData): {
+  nodes: Node[];
+  edges: Edge[];
+} {
   const nodes: Node[] = data.nodes.map((n: GraphNode) => ({
     id: n.id,
     type: "default",
@@ -70,7 +80,10 @@ interface DependencyGraphProps {
   onNodeClick?: (node: GraphNode) => void;
 }
 
-export default function DependencyGraph({ data, onNodeClick }: DependencyGraphProps) {
+export default function DependencyGraph({
+  data,
+  onNodeClick,
+}: DependencyGraphProps) {
   const { nodes: initNodes, edges: initEdges } = buildReactFlowGraph(data);
   const [nodes, setNodes, onNodesChange] = useNodesState(initNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges);
@@ -85,14 +98,25 @@ export default function DependencyGraph({ data, onNodeClick }: DependencyGraphPr
     (_: React.MouseEvent, node: Node) => {
       onNodeClick?.(node.data.node as GraphNode);
     },
-    [onNodeClick]
+    [onNodeClick],
   );
 
   // Build legend from unique communities
-  const usedCommunities = [...new Set(data.nodes.map((n) => n.community).filter((c) => c !== undefined))] as number[];
+  const usedCommunities = [
+    ...new Set(
+      data.nodes.map((n) => n.community).filter((c) => c !== undefined),
+    ),
+  ] as number[];
 
   return (
-    <div style={{ width: "100%", height: "100%", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
