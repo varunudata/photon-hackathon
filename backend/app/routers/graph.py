@@ -39,7 +39,7 @@ async def get_graph(
     }
 
 
-@router.get("/{repo_id}/subgraph/{node_id}")
+@router.get("/{repo_id}/subgraph/{node_id:path}")
 async def get_subgraph(
     repo_id: str,
     node_id: str,

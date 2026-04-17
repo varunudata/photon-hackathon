@@ -1,12 +1,14 @@
 from __future__ import annotations
 from typing import Optional
 from collections import deque
+import structlog
 
 from neo4j import AsyncGraphDatabase, AsyncDriver
 
 from app.config import get_settings
 
 settings = get_settings()
+log = structlog.get_logger()
 
 
 class Neo4jClient:
@@ -104,6 +106,30 @@ class Neo4jClient:
     ) -> None:
         """Create an IMPORTS edge between modules if the target exists."""
         async with self._driver.session() as s:
+            # First, find matching target(s) for debugging
+            find_result = await s.run(
+                """
+                MATCH (tgt:Module)
+                WHERE tgt.repo_id = $repo_id
+                  AND tgt.path CONTAINS $fragment
+                RETURN tgt.node_id AS id, tgt.path AS path
+                LIMIT 5
+                """,
+                repo_id=repo_id,
+                fragment=target_path_fragment,
+            )
+            matches = await find_result.data()
+            
+            if not matches:
+                # No match found - log for debugging
+                log.debug("import.no_match", from_id=from_module_id, fragment=target_path_fragment)
+                return
+            
+            if len(matches) > 1:
+                # Multiple matches - log for debugging, but still create edges
+                log.debug("import.multiple_matches", from_id=from_module_id, fragment=target_path_fragment, matches=[m["path"] for m in matches])
+            
+            # Create the edge(s)
             await s.run(
                 """
                 MATCH (src:Module {node_id: $from_id})

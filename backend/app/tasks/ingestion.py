@@ -154,6 +154,9 @@ def run_ingestion(self, repo_id: str, job_id: str):
 
         # ── Pass 3b: Parse symbols + create IMPORTS edges ─────────────────
         parsed_cache: dict[str, object] = {}
+        total_imports_resolved = 0
+        total_imports_skipped = 0
+        
         for idx, file_info in enumerate(manifest):
             rel_path = file_info["path"]
             language = file_info["language"]
@@ -185,14 +188,20 @@ def run_ingestion(self, repo_id: str, job_id: str):
                 for imp in parsed.imports:
                     resolved = _resolve_import(imp, rel_path, language)
                     if resolved:
+                        log.info("import.resolved", from_path=rel_path, to=resolved, raw=imp, language=language)
                         loop.run_until_complete(
                             graph.upsert_import_edge(module_id, resolved, repo_id)
                         )
+                        total_imports_resolved += 1
+                    else:
+                        log.debug("import.skipped", from_path=rel_path, raw=imp, language=language)
+                        total_imports_skipped += 1
 
             progress = 45 + int((idx / max(file_count, 1)) * 17)
             if idx % 20 == 0:
                 publish("parsing", progress, f"Parsed {idx + 1}/{file_count} files")
 
+        log.info("imports.summary", resolved=total_imports_resolved, skipped=total_imports_skipped, files=file_count)
         loop.run_until_complete(graph.close())
         loop.close()
 
